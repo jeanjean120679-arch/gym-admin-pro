@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GymAdmin Pro - Sistema de Tickets y Rutinas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); min-height: 100vh; }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .card { background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); transition: transform 0.3s; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 30px rgba(0,0,0,0.15); }
+        .btn-primary { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 12px 24px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer; transition: all 0.3s; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); }
+        .sidebar-item { padding: 12px 20px; margin: 4px 12px; border-radius: 12px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 12px; color: #64748b; }
+        .sidebar-item:hover { background: #eff6ff; color: #3b82f6; }
+        .sidebar-item.active { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 20px; padding: 30px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .status-badge { padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .status-abierto { background: #dcfce7; color: #166534; }
+        .status-progreso { background: #fef3c7; color: #92400e; }
+        .status-resuelto { background: #dbeafe; color: #1e40af; }
+        .priority-alta { background: #fee2e2; color: #991b1b; }
+        .priority-media { background: #fef3c7; color: #92400e; }
+        .priority-baja { background: #dbeafe; color: #1e40af; }
+        .upload-area { border: 3px dashed #cbd5e1; border-radius: 16px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; }
+        .upload-area:hover { border-color: #3b82f6; background: #eff6ff; }
+        .toast { position: fixed; bottom: 20px; right: 20px; padding: 16px 24px; border-radius: 12px; color: white; font-weight: 600; z-index: 2000; transform: translateX(400px); transition: transform 0.3s; }
+        .toast.show { transform: translateX(0); }
+    </style>
+</head>
+<body>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<!-- LOGIN -->
+<div id="loginScreen" style="display: flex; min-height: 100vh; align-items: center; justify-content: center; padding: 20px;">
+    <div class="glass" style="padding: 40px; border-radius: 24px; width: 100%; max-width: 420px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 20px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-dumbbell" style="font-size: 36px; color: white;"></i>
+            </div>
+            <h1 style="font-size: 28px; font-weight: 800; color: #1e293b; margin-bottom: 8px;">GymAdmin Pro</h1>
+            <p style="color: #64748b;">Sistema de Gestión para Gimnasios</p>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 14px;">Correo electrónico</label>
+            <input type="email" id="loginEmail" style="width: 100%; padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 16px; outline: none; transition: all 0.3s;" placeholder="admin@gymadmin.com" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e5e7eb'">
+        </div>
+
+        <div style="margin-bottom: 24px;">
+            <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 14px;">Contraseña</label>
+            <input type="password" id="loginPassword" style="width: 100%; padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 16px; outline: none; transition: all 0.3s;" placeholder="••••••••" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e5e7eb'">
+        </div>
+
+        <button onclick="login()" class="btn-primary" style="width: 100%; font-size: 18px; padding: 16px;">
+            <i class="fas fa-sign-in-alt" style="margin-right: 8px;"></i>Iniciar Sesión
+        </button>
+
+        <div style="margin-top: 24px; padding: 16px; background: #eff6ff; border-radius: 12px; border: 1px solid #bfdbfe;">
+            <p style="font-size: 13px; color: #1d4ed8; font-weight: 600; margin-bottom: 8px;"><i class="fas fa-key" style="margin-right: 6px;"></i>Datos de acceso Admin:</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #1e40af;">
+                <span>admin@gymadmin.com</span>
+                <span style="font-family: monospace; font-weight: 700;">admin123</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp" style="display: none; min-height: 100vh;">
+    
+    <!-- Sidebar -->
+    <div style="width: 280px; background: white; height: 100vh; position: fixed; left: 0; top: 0; box-shadow: 4px 0 20px rgba(0,0,0,0.1); display: flex; flex-direction: column; z-index: 100;">
+        <div style="padding: 24px; border-bottom: 1px solid #e5e7eb;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-dumbbell" style="font-size: 24px; color: white;"></i>
+                </div>
+                <div>
+                    <h2 style="font-weight: 800; color: #1e293b; font-size: 20px;">GymAdmin</h2>
+                    <p style="font-size: 12px; color: #64748b;">Panel de Control</p>
+                </div>
+            </div>
+        </div>
+
+        <nav style="flex: 1; padding: 16px 0; overflow-y: auto;">
+            <div class="sidebar-item active" onclick="showView('dashboard')" id="nav-dashboard">
+                <i class="fas fa-chart-pie" style="width: 24px; text-align: center;"></i>
+                <span style="font-weight: 600;">Dashboard</span>
+            </div>
+            <div class="sidebar-item" onclick="showView('tickets')" id="nav-tickets">
+                <i class="fas fa-ticket-alt" style="width: 24px; text-align: center;"></i>
+                <span style="font-weight: 600;">Mis Tickets</span>
+                <span id="badgeTickets" style="margin-left: auto; background: #ef4444; color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px; display: none;">0</span>
+            </div>
+            <div class="sidebar-item" onclick="showView('newTicket')" id="nav-newTicket">
+                <i class="fas fa-plus-circle" style="width: 24px; text-align: center;"></i>
+                <span style="font-weight: 600;">Nuevo Ticket</span>
+            </div>
+            <div class="sidebar-item" onclick="showView('files')" id="nav-files">
+                <i class="fas fa-cloud-upload-alt" style="width: 24px; text-align: center;"></i>
+                <span style="font-weight: 600;">Subir Rutinas</span>
+            </div>
+
+            <div id="adminMenu" style="display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+                <p style="padding: 0 24px; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Administración</p>
+                <div class="sidebar-item" onclick="showView('users')" id="nav-users">
+                    <i class="fas fa-users-cog" style="width: 24px; text-align: center;"></i>
+                    <span style="font-weight: 600;">Gestionar Usuarios</span>
+                </div>
+                <div class="sidebar-item" onclick="showView('allTickets')" id="nav-allTickets">
+                    <i class="fas fa-clipboard-list" style="width: 24px; text-align: center;"></i>
+                    <span style="font-weight: 600;">Todos los Tickets</span>
+                </div>
+            </div>
+        </nav>
+
+        <div style="padding: 20px; border-top: 1px solid #e5e7eb; background: #f8fafc;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                <div id="userAvatar" style="width: 44px; height: 44px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px;">A</div>
+                <div style="flex: 1; min-width: 0;">
+                    <p id="userName" style="font-weight: 700; color: #1e293b; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Admin</p>
+                    <p id="userEmail" style="font-size: 12px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">admin@gymadmin.com</p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span id="userRole" style="font-size: 12px; font-weight: 700; padding: 4px 12px; background: #dbeafe; color: #1d4ed8; border-radius: 20px;">Administrador</span>
+                <button onclick="logout()" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-sign-out-alt"></i>Salir
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div style="margin-left: 280px; padding: 32px; min-height: 100vh;">
+        
+        <!-- Dashboard -->
+        <div id="view-dashboard" style="display: block;">
+            <div style="margin-bottom: 32px;">
+                <h1 style="font-size: 36px; font-weight: 800; color: white; margin-bottom: 8px;">Dashboard</h1>
+                <p style="color: #bfdbfe; font-size: 18px;">Resumen de la actividad del gimnasio</p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 32px;">
+                <div class="card" style="padding: 24px; border-left: 4px solid #3b82f6;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+                        <div>
+                            <p style="color: #64748b; font-size: 14px; font-weight: 600; margin-bottom: 4px;">Total Tickets</p>
+                            <h3 id="statTotal" style="font-size: 36px; font-weight: 800; color: #1e293b;">0</h3>
+                        </div>
+                        <div style="width: 56px; height: 56px; background: #eff6ff; border-radius: 16px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-ticket-alt" style="font-size: 28px; color: #3b82f6;"></i>
+                        </div>
+                    </div>
+                    <div style="width: 100%; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden;">
+                        <div style="width: 70%; height: 100%; background: linear-gradient(90deg, #3b82f6, #1d4ed8); border-radius: 3px;"></div>
+                    </div>
+                </div>
+
+                <div class="card" style="padding: 24px; border-left: 4px solid #f59e0b;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+                        <div>
+                            <p style="color: #64748b; font-size: 14px; font-weight: 600; margin-bottom: 4px;">En Progreso</p>
+                            <h3 id="statProgress" style="font-size: 36px; font-weight: 800; color: #1e293b;">0</h3>
+                        </div>
+                        <div style="width: 56px; height: 56px; background: #fffbeb; border-radius: 16px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-clock" style="font-size: 28px; color: #f59e0b;"></i>
+                        </div>
+                    </div>
+                    <div style="width: 100%; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden;">
+                        <div style="width: 45%; height: 100%; background: linear-gradient(90deg, #f59e0b, #d97706); border-radius: 3px;"></div>
+                    </div>
+                </div>
+
+                <div class="card" style="padding: 24px; border-left: 4px solid #10b981;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+                        <div>
+                            <p style="color: #64748b; font-size: 14px; font-weight: 600; margin-bottom: 4px;">Resueltos</p>
+                            <h3 id="statResolved" style="font-size: 36px; font-weight: 800; color: #1e293b;">0</h3>
+                        </div>
+                        <div style="width: 56px; height: 56px; background: #ecfdf5; border-radius: 16px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-check-circle" style="font-size: 28px; color: #10b981;"></i>
+                        </div>
+                    </div>
+                    <div style="width: 100%; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden;">
+                        <div style="width: 60%; height: 100%; background: linear-gradient(90deg, #10b981, #059669); border-radius: 3px;"></div>
+                    </div>
+                </div>
+
+                <div class="card" style="padding: 24px; border-left: 4px solid #8b5cf6;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+                        <div>
+                            <p style="color: #64748b; font-size: 14px; font-weight: 600; margin-bottom: 4px;">Rutinas Subidas</p>
+                            <h3 id="statFiles" style="font-size: 36px; font-weight: 800; color: #1e293b;">0</h3>
+                        </div>
+                        <div style="width: 56px; height: 56px; background: #f5f3ff; border-radius: 16px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-file-alt" style="font-size: 28px; color: #8b5cf6;"></i>
+                        </div>
+                    </div>
+                    <div style="width: 100%; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden;">
+                        <div style="width: 35%; height: 100%; background: linear-gradient(90deg, #8b5cf6, #7c3aed); border-radius: 3px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px;">
+                <div class="card" style="padding: 24px;">
+                    <h3 style="font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-history" style="color: #3b82f6;"></i>Tickets Recientes
+                    </h3>
+                    <div id="recentTicketsList" style="display: flex; flex-direction: column; gap: 12px;">
+                        <div style="text-align: center; padding: 40px; color: #94a3b8;">
+                            <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+                            <p>No hay tickets recientes</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="padding: 24px;">
+                    <h3 style="font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-cloud-upload-alt" style="color: #8b5cf6;"></i>Últimas Rutinas
+                    </h3>
+                    <div id="recentFilesList" style="display: flex; flex-direction: column; gap: 12px;">
+                        <div style="text-align: center; padding: 40px; color: #94a3b8;">
+                            <i class="fas fa-cloud" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+                            <p>No hay rutinas subidas</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tickets -->
+        <div id="view-tickets" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
+                <div>
+                    <h1 style="font-size: 36px; font-weight: 800; color: white; margin-bottom: 8px;">Mis Tickets</h1>
+                    <p style="color: #bfdbfe; font-size: 18px;">Gestiona tus solicitudes de soporte</p>
+                </div>
+                <button onclick="showView('newTicket')" class="btn-primary" style="display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-plus"></i>Nuevo Ticket
+                </button>
+            </div>
+
+            <div class="card" style="padding: 16px; margin-bottom: 24px; display: flex; gap: 12px; flex-wrap: wrap;">
+                <button onclick="setTicketFilter('all')" id="filter-all" class="filter-btn" style="padding: 10px 20px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; background: #3b82f6; color: white;">Todos</button>
+                <button onclick="setTicketFilter('abierto')" id="filter-abierto" class="filter-btn" style="padding: 10px 20px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; background: #f1f5f9; color: #64748b;">Abiertos</button>
+                <button onclick="setTicketFilter('progreso')" id="filter-progreso" class="filter-btn" style="padding: 10px 20px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; background: #f1f5f9; color: #64748b;">En Progreso</button>
+                <button onclick="setTicketFilter('resuelto')" id="filter-resuelto" class="filter-btn" style="padding: 10px 20px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; background: #f1f5f9; color: #64748b;">Resueltos</button>
+            </div>
+
+            <div id="ticketsList" style="display: flex; flex-direction: column; gap: 16px;"></div>
+        </div>
+
+        <!-- New Ticket -->
+        <div id="view-newTicket" style="display: none;">
+            <div style="max-width: 700px; margin: 0 auto;">
+                <h1 style="font-size: 36px; font-weight: 800; color: white; margin-bottom: 8px;">Crear Ticket</h1>
+                <p style="color: #bfdbfe; font-size: 18px; margin-bottom: 32px;">Reporta un problema o solicita soporte técnico</p>
+
+                <div class="card" style="padding: 32px;">
+                    <div style="margin-bottom: 24px;">
+                        <label style="display: block; font-weight: 700; color: #374151; margin-bottom: 8px; font-size: 14px;">Título del problema *</label>
+                        <input type="text" id="newTicketTitle" style="width: 100%; padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 16px; outline: none;" placeholder="Ej: Máquina de cardio no funciona">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+                        <div>
+                            <label style="display: block; font-weight: 700; color: #374151; margin-bottom: 8px; font-size: 14px;">Categoría</label>
+                            <select id="newTicketCategory" style="width: 100%; padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 16px; outline: none; background: white;">
+                                <option value="equipo">Equipo/Máquinas</option>
+                                <option value="instalaciones">Instalaciones</option>
+                                <option value="limpieza">Limpieza</option>
+                                <option value="otro">Otro</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 700; color: #374151; margin-bottom: 8px; font-size: 14px;">Prioridad</label>
+                            <select id="newTicketPriority" style="width: 100%; padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 16px; outline: none; background: white;">
+                                <option value="baja">Baja</option>
+                                <option value="media" selected>Media</option>
+                                <option value="alta">Alta</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 24px;">
+                        <label style="display: block; font-weight: 700; color: #374151; margin-bottom: 8px; font-size: 14px;">Descripción detallada *</label>
+                        <textarea id="newTicketDesc" rows="5" style="width: 100%; padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 16px; outline: none; resize: none;" placeholder="Describe el problema con todo detalle..."></textarea>
+                    </div>
+
+                    <div style="display: flex; gap: 16px;">
+                        <button onclick="createTicket()" class="btn-primary" style="flex: 1; font-size: 18px; padding: 16px;">
+                            <i class="fas fa-paper-plane" style="margin-right: 8px;"></i>Crear Ticket
+                        </button>
+                        <button onclick="showView('tickets')" style="padding: 16px 32px; border: 2px solid #e5e7eb; border-radius: 12px; background: white; color: #64748b; font-weight: 700; cursor: pointer;">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Files -->
+        <div id="view-files" style="display: none;">
+            <div style="max-width: 900px; margin: 0 auto;">
+                <h1 style="font-size: 36px; font-weight: 800; color: white; margin-bottom: 8px;">Subir Rutinas</h1>
+                <p style="color: #bfdbfe; font-size: 18px; margin-bottom: 32px;">Comparte rutinas de entrenamiento con tus alumnos</p>
+
+                <div class="card" style="padding: 32px; margin-bottom: 32px;">
+                    <div class="upload-area" onclick="document.getElementById('fileInput').click()" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                        <input type="file" id="fileInput" multiple style="display: none;" onchange="handleFileSelect(this.files)" accept=".pdf,.doc,.docx,.xls,.xlsx,.mp4,.mov,.jpg,.jpeg,.png">
+                        <div style="width: 80px; height: 80px; background: #eff6ff; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-cloud-upload-alt" style="font-size: 40px; color: #3b82f6;"></i>
+                        </div>
+                        <h3 style="font-size: 24px; font-weight: 700; color: #1e293b; margin-bottom: 8px;">Arrastra archivos aquí</h3>
+                        <p style="color: #64748b; margin-bottom: 16px;">o haz clic para seleccionar archivos de tu dispositivo</p>
+                        <div style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
+                            <span style="padding: 6px 12px; background: #f1f5f9; border-radius: 20px; font-size: 12px; color: #64748b; font-weight: 600;">PDF</span>
+                            <span style="padding: 6px 12px; background: #f1f5f9; border-radius: 20px; font-size: 12px; color: #64748b; font-weight: 600;">Word</span>
+                            <span style="padding: 6px 12px; background: #f1f5f9; border-radius: 20px; font-size: 12px; color: #64748b; font-weight: 600;">Excel</span>
+                            <span style="padding: 6px 12px; background: #f1f5f9; border-radius: 20px; font-size: 12px; color: #64748b; font-weight: 600;">Video</span>
+                            <span style="padding: 6px 12px; background: #f1f5f9; border-radius: 20px; font-size: 12px; color: #64748b; font-weight: 600;">Imagen</span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 24px 0;">
+                        <button onclick="cloudUpload('drive')" style="padding: 20px; border: 2px solid #e5e7eb; border-radius: 16px; background: white; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.borderColor='#3b82f6'; this.style.background='#eff6ff'" onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='white'">
+                            <i class="fab fa-google-drive" style="font-size: 32px; color: #10b981; margin-bottom: 8px;"></i>
+                            <p style="font-weight: 600; color: #374151;">Google Drive</p>
+                        </button>
+                        <button onclick="cloudUpload('dropbox')" style="padding: 20px; border: 2px solid #e5e7eb; border-radius: 16px; background: white; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.borderColor='#3b82f6'; this.style.background='#eff6ff'" onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='white'">
+                            <i class="fab fa-dropbox" style="font-size: 32px; color: #0061ff; margin-bottom: 8px;"></i>
+                            <p style="font-weight: 600; color: #374151;">Dropbox</p>
+                        </button>
+                        <button onclick="cloudUpload('onedrive')" style="padding: 20px; border: 2px solid #e5e7eb; border-radius: 16px; background: white; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.borderColor='#3b82f6'; this.style.background='#eff6ff'" onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='white'">
+                            <i class="fab fa-microsoft" style="font-size: 32px; color: #0078d4; margin-bottom: 8px;"></i>
+                            <p style="font-weight: 600; color: #374151;">OneDrive</p>
+                        </button>
+                    </div>
+
+                    <div id="selectedFilesSection" style="display: none;">
+                        <h4 style="font-size: 18px; font-weight: 700; color: #1e293b; margin-bottom: 16px;">Archivos seleccionados</h4>
+                        <div id="selectedFilesList" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;"></div>
+                        <button onclick="uploadFiles()" class="btn-primary" style="width: 100%; font-size: 18px; padding: 16px;">
+                            <i class="fas fa-upload" style="margin-right: 8px;"></i>Subir Archivos
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card" style="padding: 24px;">
+                    <h3 style="font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 20px;">Mis Archivos Subidos</h3>
+                    <div id="myFilesGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
+                        <!-- Files loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Admin -->
+        <div id="view-users" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
+                <div>
+                    <h1 style="font-size: 36px; font-weight: 800; color: white; margin-bottom: 8px;">Gestionar Usuarios</h1>
+                    <p style="color: #bfdbfe; font-size: 18px;">Crear y administrar alumnos y entrenadores</p>
+                </div>
+                <button onclick="openModal('modalCreateUser')" class="btn-primary" style="display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-user-plus"></i>Nuevo Usuario
+                </button>
+            </div>
+
+            <div class="card" style="overflow: hidden;">
+                <div style="padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="font-size: 18px; font-weight: 700; color: #1e293b;">Lista de Usuarios</h3>
+                    <div style="position: relative;">
+                        <i class="fas fa-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8;"></i>
+                        <input type="text" id="searchUsers" onkeyup="filterUsers()" placeholder="Buscar usuario..." style="padding: 10px 14px 10px 40px; border: 2px solid #e5e7eb; border-radius: 10px; outline: none; width: 250px;">
+                    </div>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f8fafc;">
+                                <th style="padding: 16px; text-align: left; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Usuario</th>
+                                <th style="padding: 16px; text-align: left; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Email</th>
+                                <th style="padding: 16px; text-align: left; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Rol</th>
+                                <th style="padding: 16px; text-align: left; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Estado</th>
+                                <th style="padding: 16px; text-align: left; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody" style="border-top: 1px solid #e5e7eb;">
+                            <!-- Users loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- All Tickets Admin -->
+        <div id="view-allTickets" style="display: none;">
+            <div style="margin-bottom: 32px;">
+                <h1 style="font-size: 36px; font-weight: 800; color: white; margin-bottom: 8px;">Todos los Tickets</h1>
+                <p style="color: #bfdbfe; font-size: 18px;">Vista general de todas las solicitudes del sistema</p>
+            </div>
+
+            <div class="card" style="overflow: hidden;">
+                <div style="padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; gap: 16px; flex-wrap: wrap;">
+                    <select id="allFilterStatus" onchange="loadAllTickets()" style="padding: 10px 16px; border: 2px solid #e5e7eb; border-radius: 10px; outline: none; font-size: 14px;">
+                        <option value="all">Todos los estados</option>
+                        <option value="abierto">Abierto</option>
+                        <option value="progreso">En Progreso</option>
+                        <option value="resuelto">Resuelto</option>
+                        <option value="cerrado">Cerrado</option>
+                    </select>
+                    <select id="allFilterPriority" onchange="loadAllTickets()" style="padding: 10px 16px; border: 2px solid #e5e7eb; border-radius: 10px; outline: none; font-size: 14px;">
+                        <option value="all">Todas las prioridades</option>
+                        <option value="alta">Alta</option>
+                        <option value="media">Media</option>
+                        <option value="baja">Baja</option>
+                    </select>
+                </div>
+                <div id="allTicketsList" style="display: flex; flex-direction: column;">
+                    <!-- All tickets loaded here -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- MODALS -->
+
+<!-- Create User Modal -->
+<div id="modalCreateUser" class="modal">
+    <div class="modal-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <h2 style="font-size: 24px; font-weight: 800; color: #1e293b;">Crear Nuevo Usuario</h2>
+            <button onclick="closeModal('modalCreateUser')" style="width: 40px; height: 40px; border-radius: 50%; border: none; background: #f1f5f9; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-times" style="color: #64748b;"></i>
+            </button>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 700; color: #374151; margin-bottom: 8px; font-size: 14px;">Nombre completo *</label>
+            <input type="text" id="createUserName" style="width: 100%; padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 16px; outline: none;" placeholder="Ej: Juan Pérez García">
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 700; color: #374151; margin-bottom: 8px; font-size: 14px;">Correo electrónico *</label>
+            <input type="email" id="createUserEmail" style="width: 100%; padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 16px; outline: none;" placeholder="alumno@email.com">
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 700; color: #374151; margin-bottom: 8px; font-size: 14px;">Contraseña *</label>
+            <div style="position: relative;">
+                <input type="text" id="createUserPassword" style="width: 100%; padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 16px; outline: none; padding-right: 100px;" placeholder="Mínimo 6 caracteres">
+                <button onclick="generatePassword()" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;">
+                    Generar
+                </button>
+            </div>
+            <p style="font-size: 12px; color: #94a3b8; margin-top: 6px;">Comparte esta contraseña de forma segura con el usuario</p>
+        </div>
+
+        <div style="margin-bottom: 24px;">
+            <label style="display: block; font-weight: 700; color: #374151; margin-bottom: 12px; font-size: 14px;">Tipo de usuario</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <label style="cursor: pointer;">
+                    <input type="radio" name="userRole" value="alumno" checked style="display: none;">
+                    <div style="padding: 20px; border: 2px solid #e5e7eb; border-radius: 12px; text-align: center; transition: all 0.3s;" onmouseover="if(!this.previousElementSibling.checked) this.style.borderColor='#bfdbfe'" onmouseout="if(!this.previousElementSibling.checked) this.style.borderColor='#e5e7eb'">
+                        <i class="fas fa-user" style="font-size: 28px; color: #94a3b8; margin-bottom: 8px;"></i>
+                        <p style="font-weight: 700; color: #374151;">Alumno</p>
+                    </div>
+                </label>
+                <label style="cursor: pointer;">
+                    <input type="radio" name="userRole" value="admin" style="display: none;">
+                    <div style="padding: 20px; border: 2px solid #e5e7eb; border-radius: 12px; text-align: center; transition: all 0.3s;" onmouseover="if(!this.previousElementSibling.checked) this.style.borderColor='#bfdbfe'" onmouseout="if(!this.previousElementSibling.checked) this.style.borderColor='#e5e7eb'">
+                        <i class="fas fa-user-shield" style="font-size: 28px; color: #94a3b8; margin-bottom: 8px;"></i>
+                        <p style="font-weight: 700; color: #374151;">Entrenador/Admin</p>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 12px;">
+            <button onclick="createUser()" class="btn-primary" style="flex: 1; padding: 14px;">
+                Crear Usuario
+            </button>
+            <button onclick="closeModal('modalCreateUser')" style="padding: 14px 24px; border: 2px solid #e5e7eb; border-radius: 12px; background: white; color: #64748b; font-weight: 700; cursor: pointer;">
+                Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Ticket Detail Modal -->
+<div id="modalTicketDetail" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 20px;">
+            <div>
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                    <span id="detailTicketId" style="font-family: monospace; color: #94a3b8; font-size: 14px;">#TKT-001</span>
+                    <span id="detailStatus" class="status-badge status-abierto">Abierto</span>
+                    <span id="detailPriority" class="priority-badge priority-media">Media</span>
+                </div>
+                <h2 id="detailTitle" style="font-size: 24px; font-weight: 800; color: #1e293b;">Título del ticket</h2>
+                <p style="color: #64748b; font-size: 14px; margin-top: 4px;">
+                    Por <span id="detailUser" style="color: #3b82f6; font-weight: 600;">Usuario</span> • <span id="detailDate">01/01/2024</span>
+                </p>
+            </div>
+            <button onclick="closeModal('modalTicketDetail')" style="width: 40px; height: 40px; border-radius: 50%; border: none; background: #f1f5f9; cursor: pointer;">
+                <i class="fas fa-times" style="color: #64748b;"></i>
+            </button>
+        </div>
+
+        <div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 24px;">
+            <p id="detailDesc" style="color: #374151; line-height: 1.6;">Descripción del ticket...</p>
+        </div>
+
+        <div style="margin-bottom: 24px;">
+            <h4 style="font-weight: 700; color: #1e293b; margin-bottom: 12px;">Comentarios</h4>
+            <div id="detailComments" style="max-height: 300px; overflow-y: auto; margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px;">
+                <!-- Comments loaded here -->
+            </div>
+            <div style="display: flex; gap: 12px;">
+                <input type="text" id="detailNewComment" style="flex: 1; padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 10px; outline: none;" placeholder="Escribe un comentario..." onkeypress="if(event.key==='Enter') addDetailComment()">
+                <button onclick="addDetailComment()" style="padding: 12px 20px; background: #3b82f6; color: white; border: none; border-radius: 10px; cursor: pointer;">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+
+        <div style="background: #f8fafc; padding: 20px; border-radius: 12px;">
+            <h4 style="font-weight: 700; color: #1e293b; margin-bottom: 12px;">Cambiar Estado</h4>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                <button onclick="changeStatus('abierto')" style="padding: 10px; background: #dcfce7; color: #166534; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;">Abrir</button>
+                <button onclick="changeStatus('progreso')" style="padding: 10px; background: #fef3c7; color: #92400e; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;">En Progreso</button>
+                <button onclick="changeStatus('resuelto')" style="padding: 10px; background: #dbeafe; color: #1e40af; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;">Resolver</button>
+                <button onclick="changeStatus('cerrado')" style="padding: 10px; background: #e5e7eb; color: #374151; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ==================== DATA ====================
+const App = {
+    users: [
+        { id: 1, name: 'Administrador Principal', email: 'admin@gymadmin.com', password: 'admin123', role: 'admin', active: true, createdAt: new Date().toISOString() }
+    ],
+    tickets: [],
+    files: [],
+    tempFiles: [],
+    currentUser: null,
+    currentTicket: null,
+    ticketFilter: 'all'
+};
+
+// ==================== AUTH ====================
+function login() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    
+    if (!email || !password) {
+        showToast('Completa todos los campos', 'error');
+        return;
+    }
+    
+    const user = App.users.find(u => u.email === email && u.password === password && u.active);
+    if (user) {
+        App.currentUser = user;
+        localStorage.setItem('gymadmin_session', JSON.stringify(user));
+        showMainApp();
+        showToast(`¡Bienvenido, ${user.name}!`, 'success');
+    } else {
+        showToast('Credenciales incorrectas', 'error');
+    }
+}
+
+function logout() {
+    App.currentUser = null;
+    localStorage.removeItem('gymadmin_session');
+    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('loginEmail').value = '';
+    document.getElementById('loginPassword').value = '';
+    showToast('Sesión cerrada', 'success');
+}
+
+function showMainApp() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'flex';
+    
+    document.getElementById('userName').textContent = App.currentUser.name;
+    document.getElementById('userEmail').textContent = App.currentUser.email;
+    document.getElementById('userAvatar').textContent = App.currentUser.name.charAt(0).toUpperCase();
+    document.getElementById('userRole').textContent = App.currentUser.role === 'admin' ? 'Administrador' : 'Alumno';
+    
+    if (App.currentUser.role === 'admin') {
+        document.getElementById('adminMenu').style.display = 'block';
+    }
+    
+    showView('dashboard');
+}
+
+// Check saved session
+if (localStorage.getItem('gymadmin_session')) {
+    App.currentUser = JSON.parse(localStorage.getItem('gymadmin_session'));
+    showMainApp();
+}
+
+// ==================== NAVIGATION ====================
+function showView(view) {
+    // Hide all views
+    document.querySelectorAll('[id^="view-"]').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.sidebar-item').forEach(el => {
+        el.classList.remove('active');
+        el.style.color = '#64748b';
+    });
+    
+    // Show selected
+    document.getElementById(`view-${view}`).style.display = 'block';
+    
+    // Update sidebar
+    const navMap = {
+        'dashboard': 'nav-dashboard',
+        'tickets': 'nav-tickets',
+        'newTicket': 'nav-newTicket',
+        'files': 'nav-files',
+        'users': 'nav-users',
+        'allTickets': 'nav-allTickets'
+    };
+    
+    const navEl = document.getElementById(navMap[view]);
+    if (navEl) {
+        navEl.classList.add('active');
+        navEl.style.color = 'white';
+    }
+    
+    // Load data
+    if (view === 'dashboard') loadDashboard();
+    if (view === 'tickets') loadTickets();
+    if (view === 'files') loadFiles();
+    if (view === 'users' && App.currentUser.role === 'admin') loadUsers();
+    if (view === 'allTickets' && App.currentUser.role === 'admin') loadAllTickets();
+}
+
+// ==================== DASHBOARD ====================
+function loadDashboard() {
+    const myTickets = App.tickets.filter(t => t.userId === App.currentUser.id);
+    const myFiles = App.files.filter(f => f.userId === App.currentUser.id);
+    
+    document.getElementById('statTotal').textContent = myTickets.length;
+    document.getElementById('statProgress').textContent = myTickets.filter(t => t.status === 'progreso').length;
+    document.getElementById('statResolved').textContent = myTickets.filter(t => t.status === 'resuelto').length;
+    document.getElementById('statFiles').textContent = myFiles.length;
+    
+    // Recent tickets
+    const recent = myTickets.slice(-3).reverse();
+    const tContainer = document.getElementById('recentTicketsList');
+    if (recent.length > 0) {
+        tContainer.innerHTML = recent.map(t => `
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; background: #f8fafc; border-radius: 12px; cursor: pointer;" onclick="openTicketDetail(${t.id})">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 40px; height: 40px; border-radius: 10px; background: ${t.priority === 'alta' ? '#fee2e2' : t.priority === 'media' ? '#fef3c7' : '#dbeafe'}; display: flex; align-items: center; justify-content: center; color: ${t.priority === 'alta' ? '#dc2626' : t.priority === 'media' ? '#d97706' : '#2563eb'};">
+                        <i class="fas fa-ticket-alt"></i>
+                    </div>
+                    <div>
+                        <p style="font-weight: 700; color: #1e293b;">${t.title}</p>
+                        <p style="font-size: 13px; color: #64748b;">${new Date(t.createdAt).toLocaleDateString()}</p>
+                    </div>
+                </div>
+                <span class="status-badge ${getStatusClass(t.status)}">${getStatusLabel(t.status)}</span>
+            </div>
+        `).join('');
+    }
+    
+    // Recent files
+    const recentFiles = myFiles.slice(-3).reverse();
+    const fContainer = document.getElementById('recentFilesList');
+    if (recentFiles.length > 0) {
+        fContainer.innerHTML = recentFiles.map(f => `
+            <div style="display: flex; align-items: center; gap: 12px; padding: 16px; background: #f8fafc; border-radius: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: #f5f3ff; display: flex; align-items: center; justify-content: center; color: #8b5cf6;">
+                    <i class="fas ${getFileIcon(f.type)}"></i>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                    <p style="font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${f.name}</p>
+                    <p style="font-size: 13px; color: #64748b;">${formatBytes(f.size)}</p>
+                </div>
+            </div>
+        `).join('');
+    }
+}
+
+// ==================== TICKETS ====================
+function loadTickets() {
+    let tickets = App.tickets.filter(t => t.userId === App.currentUser.id);
+    
+    if (App.ticketFilter !== 'all') {
+        tickets = tickets.filter(t => t.status === App.ticketFilter);
+    }
+    
+    tickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    
+    const container = document.getElementById('ticketsList');
+    
+    if (tickets.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 60px; background: white; border-radius: 16px;">
+                <i class="fas fa-ticket-alt" style="font-size: 64px; color: #cbd5e1; margin-bottom: 20px;"></i>
+                <h3 style="font-size: 20px; font-weight: 700; color: #374151; margin-bottom: 8px;">No hay tickets</h3>
+                <p style="color: #64748b; margin-bottom: 20px;">Crea tu primera solicitud de soporte</p>
+                <button onclick="showView('newTicket')" class="btn-primary">Crear Ticket</button>
+            </div>
+        `;
+        document.getElementById('badgeTickets').style.display = 'none';
+        return;
+    }
+    
+    container.innerHTML = tickets.map(t => `
+        <div class="card" style="padding: 24px; cursor: pointer;" onclick="openTicketDetail(${t.id})">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                <div>
+                    <span style="font-family: monospace; color: #94a3b8; font-size: 13px;">#${t.ticketId}</span>
+                    <h3 style="font-size: 18px; font-weight: 700; color: #1e293b; margin-top: 4px;">${t.title}</h3>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <span class="priority-badge ${getPriorityClass(t.priority)}">${t.priority.toUpperCase()}</span>
+                    <span class="status-badge ${getStatusClass(t.status)}">${getStatusLabel(t.status)}</span>
+                </div>
+            </div>
+            <p style="color: #64748b; margin-bottom: 16px; line-height: 1.5;">${t.description}</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #94a3b8;">
+                <span>${getCategoryLabel(t.category)}</span>
+                <span>${new Date(t.createdAt).toLocaleDateString()}</span>
+            </div>
+        </div>
+    `).join('');
+    
+    // Update badge
+    const openCount = tickets.filter(t => t.status === 'abierto').length;
+    const badge = document.getElementById('badgeTickets');
+    if (openCount > 0) {
+        badge.textContent = openCount;
+        badge.style.display = 'inline';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+function setTicketFilter(filter) {
+    App.ticketFilter = filter;
+    
+    // Update buttons
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.style.background = '#f1f5f9';
+        btn.style.color = '#64748b';
+    });
+    
+    const activeBtn = document.getElementById(`filter-${filter}`);
+    activeBtn.style.background = '#3b82f6';
+    activeBtn.style.color = 'white';
+    
+    loadTickets();
+}
+
+function createTicket() {
+    const title = document.getElementById('newTicketTitle').value.trim();
+    const category = document.getElementById('newTicketCategory').value;
+    const priority = document.getElementById('newTicketPriority').value;
+    const description = document.getElementById('newTicketDesc').value.trim();
+    
+    if (!title || !description) {
+        showToast('Completa los campos obligatorios', 'error');
+        return;
+    }
+    
+    const newTicket = {
+        id: Date.now(),
+        ticketId: 'TKT-' + String(App.tickets.length + 1).padStart(3, '0'),
+        userId: App.currentUser.id,
+        title,
+        category,
+        priority,
+        description,
+        status: 'abierto',
+        createdAt: new Date().toISOString(),
+        comments: []
+    };
+    
+    App.tickets.push(newTicket);
+    
+    document.getElementById('newTicketTitle').value = '';
+    document.getElementById('newTicketDesc').value = '';
+    
+    showToast('Ticket creado exitosamente', 'success');
+    showView('tickets');
+}
+
+function openTicketDetail(ticketId) {
+    const ticket = App.tickets.find(t => t.id === ticketId);
+    if (!ticket) return;
+    
+    App.currentTicket = ticket;
+    
+    document.getElementById('detailTicketId').textContent = '#' + ticket.ticketId;
+    document.getElementById('detailTitle').textContent = ticket.title;
+    document.getElementById('detailDesc').textContent = ticket.description;
+    
+    const user = App.users.find(u => u.id === ticket.userId);
+    document.getElementById('detailUser').textContent = user ? user.name : 'Usuario';
+    document.getElementById('detailDate').textContent = new Date(ticket.createdAt).toLocaleDateString();
+    
+    document.getElementById('detailStatus').className = 'status-badge ' + getStatusClass(ticket.status);
+    document.getElementById('detailStatus').textContent = getStatusLabel(ticket.status);
+    
+    document.getElementById('detailPriority').className = 'priority-badge ' + getPriorityClass(ticket.priority);
+    document.getElementById('detailPriority').textContent = ticket.priority.toUpperCase();
+    
+    loadDetailComments();
+    openModal('modalTicketDetail');
+}
+
+function loadDetailComments() {
+    const container = document.getElementById('detailComments');
+    if (!App.currentTicket.comments || App.currentTicket.comments.length === 0) {
+        container.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 20px;">Sin comentarios aún</p>';
+        return;
+    }
+    
+    container.innerHTML = App.currentTicket.comments.map(c => `
+        <div style="padding: 16px; background: ${c.system ? '#eff6ff' : '#f8fafc'}; border-radius: 12px; border: ${c.system ? '1px solid #bfdbfe' : 'none'};">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-weight: 700; color: ${c.system ? '#1d4ed8' : '#1e293b'}; font-size: 14px;">
+                    ${c.userName} ${c.system ? '<i class="fas fa-robot" style="margin-left: 6px;"></i>' : ''}
+                </span>
+                <span style="font-size: 12px; color: #94a3b8;">${timeAgo(c.timestamp)}</span>
+            </div>
+            <p style="color: #374151; font-size: 14px;">${c.text}</p>
+        </div>
+    `).join('');
+    
+    container.scrollTop = container.scrollHeight;
+}
+
+function addDetailComment() {
+    const input = document.getElementById('detailNewComment');
+    const text = input.value.trim();
+    if (!text || !App.currentTicket) return;
+    
+    App.currentTicket.comments.push({
+        id: Date.now(),
+        userId: App.currentUser.id,
+        userName: App.currentUser.name,
+        text,
+        timestamp: new Date().toISOString(),
+        system: false
+    });
+    
+    input.value = '';
+    loadDetailComments();
+    
+    // Auto reply
+    if (App.currentUser.role !== 'admin') {
+        setTimeout(() => {
+            App.currentTicket.comments.push({
+                id: Date.now() + 1,
+                userId: 0,
+                userName: 'Sistema',
+                text: 'Gracias por tu mensaje. Un administrador te responderá pronto.',
+                timestamp: new Date().toISOString(),
+                system: true
+            });
+            if (document.getElementById('modalTicketDetail').classList.contains('active')) {
+                loadDetailComments();
+            }
+        }, 1000);
+    }
+}
+
+function changeStatus(status) {
+    if (!App.currentTicket) return;
+    
+    App.currentTicket.status = status;
+    App.currentTicket.comments.push({
+        id: Date.now(),
+        userId: App.currentUser.id,
+        userName: App.currentUser.name,
+        text: `Cambió el estado a: ${getStatusLabel(status)}`,
+        timestamp: new Date().toISOString(),
+        system: true
+    });
+    
+    showToast('Estado actualizado', 'success');
+    openTicketDetail(App.currentTicket.id);
+    loadTickets();
+}
+
+// ==================== FILES ====================
+function handleDragOver(e) {
+    e.preventDefault();
+    e.currentTarget.classList.add('dragover');
+}
+
+function handleDragLeave(e) {
+    e.currentTarget.classList.remove('dragover');
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('dragover');
+    handleFileSelect(e.dataTransfer.files);
+}
+
+function handleFileSelect(files) {
+    Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            App.tempFiles.push({
+                id: Date.now() + Math.random(),
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                data: e.target.result
+            });
+            updateSelectedFiles();
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function cloudUpload(service) {
+    showToast(`Conectando con ${service}...`, 'success');
+    setTimeout(() => {
+        const mockFiles = [
+            { name: `rutina_pectoral_${service}.pdf`, size: 2048000, type: 'application/pdf' },
+            { name: `plan_nutricional_${service}.xlsx`, size: 1536000, type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+        ];
+        
+        mockFiles.forEach(f => {
+            App.tempFiles.push({
+                id: Date.now() + Math.random(),
+                name: f.name,
+                size: f.size,
+                type: f.type,
+                data: 'data:application/octet-stream;base64,',
+                cloudSource: service
+            });
+        });
+        
+        updateSelectedFiles();
+        showToast(`${mockFiles.length} archivos importados`, 'success');
+    }, 1500);
+}
+
+function updateSelectedFiles() {
+    const section = document.getElementById('selectedFilesSection');
+    const list = document.getElementById('selectedFilesList');
+    
+    if (App.tempFiles.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+    
+    section.style.display = 'block';
+    list.innerHTML = App.tempFiles.map((f, i) => `
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; background: #f8fafc; border-radius: 12px; border: 1px solid #e5e7eb;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; background: #eff6ff; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #3b82f6;">
+                    <i class="fas ${getFileIcon(f.type)}"></i>
+                </div>
+                <div>
+                    <p style="font-weight: 700; color: #1e293b;">${f.name}</p>
+                    <p style="font-size: 13px; color: #64748b;">${formatBytes(f.size)} ${f.cloudSource ? `• ${f.cloudSource}` : ''}</p>
+                </div>
+            </div>
+            <button onclick="removeTempFile(${i})" style="width: 36px; height: 36px; border-radius: 50%; border: none; background: #fee2e2; color: #dc2626; cursor: pointer;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `).join('');
+}
+
+function removeTempFile(index) {
+    App.tempFiles.splice(index, 1);
+    updateSelectedFiles();
+}
+
+function uploadFiles() {
+    if (App.tempFiles.length === 0) {
+        showToast('Selecciona archivos primero', 'error');
+        return;
+    }
+    
+    App.tempFiles.forEach(f => {
+        App.files.push({
+            ...f,
+            userId: App.currentUser.id,
+            uploadedAt: new Date().toISOString()
+        });
+    });
+    
+    App.tempFiles = [];
+    updateSelectedFiles();
+    loadFiles();
+    showToast('Archivos subidos exitosamente', 'success');
+}
+
+function loadFiles() {
+    const myFiles = App.files.filter(f => f.userId === App.currentUser.id);
+    const container = document.getElementById('myFilesGrid');
+    
+    if (myFiles.length === 0) {
+        container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #94a3b8;">No has subido archivos aún</div>';
+        return;
+    }
+    
+    container.innerHTML = myFiles.map(f => `
+        <div class="card" style="padding: 20px; display: flex; align-items: center; gap: 16px;">
+            <div style="width: 50px; height: 50px; background: #f5f3ff; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #8b5cf6; font-size: 24px;">
+                <i class="fas ${getFileIcon(f.type)}"></i>
+            </div>
+            <div style="flex: 1; min-width: 0;">
+                <p style="font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${f.name}</p>
+                <p style="font-size: 13px; color: #64748b;">${formatBytes(f.size)} • ${f.cloudSource || 'Local'}</p>
+            </div>
+            <button onclick="downloadFile('${f.data}', '${f.name}')" style="padding: 10px 16px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                <i class="fas fa-download"></i>
+            </button>
+        </div>
+    `).join('');
+}
+
+function downloadFile(data, filename) {
+    const a = document.createElement('a');
+    a.href = data;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast('Descargando archivo...', 'success');
+}
+
+// ==================== ADMIN USERS ====================
+function loadUsers() {
+    const tbody = document.getElementById('usersTableBody');
+    tbody.innerHTML = App.users.map(u => `
+        <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 16px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;">
+                        ${u.name.charAt(0).toUpperCase()}
+                    </div>
+                    <span style="font-weight: 700; color: #1e293b;">${u.name}</span>
+                </div>
+            </td>
+            <td style="padding: 16px; color: #64748b;">${u.email}</td>
+            <td style="padding: 16px;">
+                <span style="padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; ${u.role === 'admin' ? 'background: #f5f3ff; color: #7c3aed;' : 'background: #ecfdf5; color: #059669;'}">
+                    ${u.role === 'admin' ? 'ADMIN' : 'ALUMNO'}
+                </span>
+            </td>
+            <td style="padding: 16px;">
+                <span style="padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; ${u.active ? 'background: #ecfdf5; color: #059669;' : 'background: #fee2e2; color: #dc2626;'}">
+                    ${u.active ? 'ACTIVO' : 'INACTIVO'}
+                </span>
+            </td>
+            <td style="padding: 16px;">
+                <button onclick="toggleUserActive(${u.id})" style="color: #3b82f6; font-weight: 600; margin-right: 16px; background: none; border: none; cursor: pointer;">
+                    ${u.active ? 'Desactivar' : 'Activar'}
+                </button>
+                ${u.id !== App.currentUser.id ? `
+                    <button onclick="deleteUser(${u.id})" style="color: #dc2626; font-weight: 600; background: none; border: none; cursor: pointer;">
+                        Eliminar
+                    </button>
+                ` : ''}
+            </td>
+        </tr>
+    `).join('');
+}
+
+function createUser() {
+    const name = document.getElementById('createUserName').value.trim();
+    const email = document.getElementById('createUserEmail').value.trim();
+    const password = document.getElementById('createUserPassword').value;
+    const role = document.querySelector('input[name="userRole"]:checked').value === 'admin' ? 'admin' : 'alumno';
+    
+    if (!name || !email || !password) {
+        showToast('Completa todos los campos', 'error');
+        return;
+    }
+    
+    if (password.length < 6) {
+        showToast('La contraseña debe tener al menos 6 caracteres', 'error');
+        return;
+    }
+    
+    if (App.users.find(u => u.email === email)) {
+        showToast('Este email ya está registrado', 'error');
+        return;
+    }
+    
+    App.users.push({
+        id: Date.now(),
+        name,
+        email,
+        password,
+        role,
+        active: true,
+        createdAt: new Date().toISOString()
+    });
+    
+    closeModal('modalCreateUser');
+    loadUsers();
+    showToast('Usuario creado exitosamente', 'success');
+    
+    document.getElementById('createUserName').value = '';
+    document.getElementById('createUserEmail').value = '';
+    document.getElementById('createUserPassword').value = '';
+}
+
+function toggleUserActive(userId) {
+    const user = App.users.find(u => u.id === userId);
+    if (user && user.id !== App.currentUser.id) {
+        user.active = !user.active;
+        loadUsers();
+        showToast(`Usuario ${user.active ? 'activado' : 'desactivado'}`, 'success');
+    }
+}
+
+function deleteUser(userId) {
+    if (userId === App.currentUser.id) {
+        showToast('No puedes eliminar tu propia cuenta', 'error');
+        return;
+    }
+    
+    if (confirm('¿Eliminar este usuario permanentemente?')) {
+        App.users = App.users.filter(u => u.id !== userId);
+        loadUsers();
+        showToast('Usuario eliminado', 'success');
+    }
+}
+
+function filterUsers() {
+    const term = document.getElementById('searchUsers').value.toLowerCase();
+    const rows = document.querySelectorAll('#usersTableBody tr');
+    rows.forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none';
+    });
+}
+
+function generatePassword() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    let pass = '';
+    for (let i = 0; i < 12; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length
